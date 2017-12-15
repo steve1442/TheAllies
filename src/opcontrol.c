@@ -13,7 +13,7 @@ const int cbendpos = 100, cbstartpos = 0, cb_pwm = 127, arm_const = 127;
 int leftback = 1, leftfront = 2, clawdp = 3, mogo = 4,
 smallarm = 7, bigarm = 8, rightfront = 9, rightback = 10;
 
-const int stop = 0, maxmenus = 25, bound = 100;
+const int maxmenus = 25, bound = 100;
 int stack = 0, menu = 0, lastV = 0, armspeed = 10, armheight = 70, cbhieght = 1000, cbspeed = 10, selectedauton = 0;
 bool overrided = false;
                       //M1 M2 M3 M4 M5 M6 M7 M8 M9 M10
