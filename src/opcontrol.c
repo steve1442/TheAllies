@@ -108,7 +108,34 @@ void drive(int left, int right) // drive func
 void arm(int pwm){motor[bigarm] = -pwm;} // simple arm func
 void cb(int pwm){motor[smallarm] = -pwm;} // chainbar func
 void MOGO(int pwm){motor[mogo] = pwm;} // mogo func
-void claw(int pwm){motor[clawdp] = pwm;} // claw func
+void claw(int pwm)
+{
+	motor[clawdp] = pwm;
+} // claw func
+int toggle;
+void ToggleClaw()
+{
+	bool ClawOpen = joystickGetDigital(1, 5, JOY_UP);
+	if(ClawOpen)
+	{
+		toggle = abs(toggle - 1);
+	}
+	if(toggle)
+	{
+		if(analogRead(clawpot) > 1000)
+		{
+			claw(127);
+		}
+	}
+	else if(!toggle)
+	{
+		if(analogRead(clawpot) < 1000)
+		{
+			claw(-127);
+		}
+	}
+	last.co = ClawOpen;
+}
 void update(){ // updates the motors and hopefully the digital ports soon
 	motorSet(1, motor[1]); motorSet(2, motor[2]); motorSet(3, motor[3]); motorSet(4, motor[4]); motorSet(5, motor[5]);    /*Current error with my digital ports not working in the update*/
 	motorSet(6, motor[6]); motorSet(7, motor[7]); motorSet(8, motor[8]); motorSet(9, motor[9]); motorSet(10, motor[10]);
@@ -122,36 +149,12 @@ void pid(int Kp, int Kd, int val, int currentval)
 	arm(x);
 	previous = error;
 }
-	void suspendarm(int pwm, int value, int potentval)
+void armtask() // aww hell i gotta make a new pid now
 {
-	int nop = (value - potentval)/abs(value - potentval);
-		if( (potentval > value && nop == -1) || ((potentval < value && nop == 1)) ){cb(pwm * nop);}}
-	void armtask() // aww hell i gotta make a new pid now
-{
-	//suspendarm(127, 1000, analogRead(larmpot));
 	pid(1,1, armheight, analogRead(barmpot));
 }
-	void potentarm(int pwm, int potent, int potentport){ // function to get the arm to go up or down based on a potentiometer input
-  int potentval = analogRead(potentport);
-	int nop = (potent - potentval)/abs(potent - potentval);  // hey kevin do these functions look ok?
-	while((potentval > potent && nop == -1) || ((potentval < potent && nop == 1)) ){
-    arm(pwm * nop);
-    potentval = analogRead(potentport);
-		lcdPrint(uart1, 1, "L Arm Pot %d", potentval);
-		lcdPrint(uart1, 2, "Goal %d", potent);
-		delay(5);
-  }
-  arm(stop); // pid but not really - stev
-}
-void potentcb(int pwm, int potent, int potentport){ // function to get the cb to go up or down based on a potentiometer input
-  int potentval = analogRead(potentport);
-	int nop = (potent - potentval)/abs(potent - potentval);
-	while ( (potentval > potent && nop == -1) || ((potentval < potent && nop == 1)) )
-	{cb(pwm * nop); potentval = analogRead(potentport);
-	delay(5);} cb(stop);}
 void scoredatcone(int x){ // the auto stacking code that joseph wants
 	claw(copen);
-	potentarm(arm_const, armthing[x], barmpot);
 	// gonna have to redo this too
 	//claw(cclose);
 	//potentcb(cb_pwm, cbstartpos, analogRead(cbpot));
@@ -159,15 +162,13 @@ void scoredatcone(int x){ // the auto stacking code that joseph wants
 }
 void controller(){ // controller function for making it easier for recordable auton
 	int LeftJoyStick = joystickGetAnalog(1, 2), RightJoyStick = joystickGetAnalog(1, 3);
-	bool ClawOpen = joystickGetDigital(1, 5, JOY_UP), ClawClose = joystickGetDigital(1, 5, JOY_DOWN),
-	armopen = joystickGetDigital(1, 6, JOY_UP), armclose = joystickGetDigital(1, 6, JOY_DOWN),
+bool	armopen = joystickGetDigital(1, 6, JOY_UP), armclose = joystickGetDigital(1, 6, JOY_DOWN),
 	mogoopen = joystickGetDigital(2, 8, JOY_UP), mogoclose = joystickGetDigital(2, 8, JOY_DOWN),
 	stackup = joystickGetDigital(2, 6, JOY_UP), stackdown = joystickGetDigital(2, 6, JOY_DOWN),
 	cbup = joystickGetDigital(1, 8, JOY_UP), cbdown = joystickGetDigital(1, 8, JOY_DOWN),
 	override = joystickGetDigital(1, 7, JOY_LEFT);
 	drive(LeftJoyStick, RightJoyStick);
 	if(override && !last.override){overrided = abs(overrided - 1);}
-	claw(127 * (ClawOpen - ClawClose));
 	MOGO(127 * (mogoopen - mogoclose));
 	if(armopen == 1 && last.arm == 0 && !overrided){scoredatcone(stack); stack += 1;}
 	else if(armclose && !overrided){stack -= 1;}
@@ -186,7 +187,7 @@ void controller(){ // controller function for making it easier for recordable au
 		/*arm((armopen - armclose) * arm_const);
 		cb((cbup - cbdown) * cb_pwm);*/
 	}
-	armopen = last.arm, last.sd = stackdown, last.su = stackup,	last.cc = ClawClose, last.co = ClawClose, last.mo = mogoopen, last.mc = mogoclose, last.override = override;
+	armopen = last.arm, last.sd = stackdown, last.su = stackup, last.mo = mogoopen, last.mc = mogoclose, last.override = override;
 delay(20);}
 void recordcode(){ // simple record auton code
 	for(int t = 0; t < 1020; t++){
